@@ -23,16 +23,26 @@ class TextStrategy extends AbstractStrategy
     {
         /** @var EavSetup $eavSetup */
         $eavSetup = $this->eavSetupFactory->create();
-        $eavSetup->addAttribute(
-            Product::ENTITY,
-            $this->code,
-            array_merge(self::$defaultAttrConfig, [
-                'type'  => 'varchar',
-                'label' => $this->attrData['label'],
-                'input' => 'text',
-            ])
-        );
+        // check if we can load the attribute
+        $attribute = $eavSetup->getAttribute(Product::ENTITY,$this->code);
 
-        return $eavSetup->getAttributeId(Product::ENTITY, $this->code);
+        // getAttribute returns array if attribute doesnt exists
+        if(is_array($attribute)){
+            $eavSetup->addAttribute(
+                Product::ENTITY,
+                $this->code,
+                array_merge(self::$defaultAttrConfig, [
+                    'is_filterable' => false,  // text attributes are always not filterable
+                    'filterable' => false,
+                    'filterable_in_search' => false,
+                    'is_filterable_in_search' => false,
+                    'type' => 'varchar',
+                    'label' => $this->attrData['label'],
+                    'input' => 'text'
+                ])
+            );
+             return $eavSetup->getAttributeId(Product::ENTITY, $this->code);
+        }
+        return $attribute->getAttributeId();
     }
 }

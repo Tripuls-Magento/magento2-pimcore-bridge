@@ -8,48 +8,17 @@
 
 namespace Divante\PimcoreIntegration\Listeners;
 
-use Divante\PimcoreIntegration\Api\ProductRepositoryInterface;
-use Magento\Catalog\Api\Data\ProductLinkInterfaceFactory;
-use Magento\Catalog\Model\ResourceModel\Product\Collection;
-use Magento\Catalog\Model\ResourceModel\Product\CollectionFactory;
 use Magento\Framework\Event\Observer;
-use Magento\Framework\Event\ObserverInterface;
 
 /**
  * Class RelatedProductsLinkerListener
  */
-class RelatedProductsLinkerListener implements ObserverInterface
+class RelatedProductsLinkerListener extends AbstractLinkerListener
 {
-    /**
-     * @var CollectionFactory
-     */
-    private $collectionFactory;
 
-    /**
-     * @var ProductLinkInterfaceFactory
-     */
-    private $linkInterfaceFactory;
+    const PIMCORE_FIELDNAME_RELATED = 'related_products';
+    const MAGENTO_PRODUCT_LINKTYPE_RELATED = 'related';
 
-    /**
-     * @var ProductRepositoryInterface
-     */
-    private $productRepository;
-
-    /**
-     * RelatedProductsModifier constructor.
-     *
-     * @param CollectionFactory $collectionFactory
-     * @param ProductLinkInterfaceFactory $linkInterfaceFactory
-     */
-    public function __construct(
-        CollectionFactory $collectionFactory,
-        ProductLinkInterfaceFactory $linkInterfaceFactory,
-        ProductRepositoryInterface $productRepository
-    ) {
-        $this->collectionFactory = $collectionFactory;
-        $this->linkInterfaceFactory = $linkInterfaceFactory;
-        $this->productRepository = $productRepository;
-    }
 
     /**
      * @param Observer $observer
@@ -59,49 +28,12 @@ class RelatedProductsLinkerListener implements ObserverInterface
     public function execute(Observer $observer)
     {
         $pimcoreProduct = $observer->getData('pimcore');
+        /** @var \Magento\Catalog\Model\Product $product */
         $product = $observer->getData('product');
 
-        $relatedProductsIds = $pimcoreProduct->getData('related_products');
-
-        if (null === $relatedProductsIds) {
-            return;
-        }
-
-        $collection = $this->getCollectionOfRelatedProducts($relatedProductsIds);
-        $collection->setFlag('has_stock_status_filter', true);
-
-        if (!$collection->getSize()) {
-            $product->setProductLinks();
-
-            return;
-        }
-
-        $productLinks = $this->linkInterfaceFactory->create();
-
-        $links = [];
-
-        foreach ($collection->getItems() as $item) {
-            $links[] = $productLinks
-                ->setSku($pimcoreProduct->getData('sku'))
-                ->setLinkedProductSku($item->getData('sku'))
-                ->setLinkType("related");
-        }
-
-        $product->setProductLinks($links);
-        $this->productRepository->save($product);
+        $this->setNewProductLinks($pimcoreProduct, $product,
+            self::MAGENTO_PRODUCT_LINKTYPE_RELATED,
+            self::PIMCORE_FIELDNAME_RELATED);
     }
 
-    /**
-     * @param $relatedProductsIds
-     *
-     * @return Collection
-     */
-    private function getCollectionOfRelatedProducts($relatedProductsIds): Collection
-    {
-        $collection = $this->collectionFactory->create();
-        $collection->addAttributeToSelect('pimcore_id');
-        $collection->addFieldToFilter('pimcore_id', ['in' => $relatedProductsIds]);
-
-        return $collection;
-    }
 }
