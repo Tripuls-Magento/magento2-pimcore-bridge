@@ -189,22 +189,19 @@ class UpdateCategoryAction implements ActionInterface
         if (false !== $imageId) {
             $newCatData->unsetData('image');
         }
-
+        
         $category->addData($newCatData->getData());
         $category->addData($this->additionalDataResource->getAdditionalData());
-        $category->setHasDataChanges(true);
-
-        if (!$category->getParentId()) {
-            if (!$this->isParentQueued($queue, $newCatData)) {
+        $category->setHasDataChanges(true);        if (!$category->getParentId()) {
+            if ($category->getData('pimcore_parent_id') && !$this->isParentQueued($queue, $newCatData)) {
                 throw new LocalizedException(
                     __(
                         'Unable to import category. Parent category with ID "%1" is not published yet.',
                         $category->getData('pimcore_parent_id')
                     )
                 );
-            }
-
-            return $this->actionResultFactory->create(['result' => ActionResultInterface::SKIPPED]);
+            }            if($category->getData('pimcore_parent_id'))
+                return $this->actionResultFactory->create(['result' => ActionResultInterface::SKIPPED]);
         }
 
         $this->eventManager->dispatch('pimcore_category_update_before', ['category' => $category]);
